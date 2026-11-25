@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HueFit — Outfit Color Recommender</title>
+    <link rel="icon" type="image/x-icon" href="/static/huefit.ico" />
+    <link rel="stylesheet" href="/static/styles.css" />
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <span class="brand-name">HueFit</span>
+                <span class="brand-tagline">Outfit Color Recommender</span>
+            </div>
+
+            <div class="topbar-actions">
+                <button id="openSavedBtn" class="header-btn" type="button" aria-label="Open saved looks">
+                    <span>Saved</span>
+                    <span id="savedCountBadge" class="saved-count">0</span>
+                </button>
+
+                <div class="theme-toggle" role="group" aria-label="Appearance">
+                    <button type="button" class="theme-opt active" data-theme-set="light">Light</button>
+                    <button type="button" class="theme-opt" data-theme-set="dark">Dark</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="spread">
+        <aside class="desk" aria-label="Styling controls">
+            <div class="desk-head">
+                <div>
+                    <div class="section-eyebrow">Styling Desk</div>
+                    <h2 class="desk-title">Your Piece</h2>
+                </div>
+                <button id="resetAllBtn" class="btn btn-outline btn-xs" type="button">Reset</button>
+            </div>
+
+            <div id="errorStrip" class="error-strip hidden" role="alert"></div>
+
+            <div class="input-tabs" role="tablist" aria-label="Input method">
+                <button type="button" class="input-tab active" data-input-tab="color" role="tab" aria-selected="true">
+                    <span>Color Studio</span>
+                </button>
+                <button type="button" class="input-tab" data-input-tab="photo" role="tab" aria-selected="false">
+                    <span>Photo Match</span>
+                    <span id="photoActiveDot" class="photo-dot hidden"></span>
+                </button>
+            </div>
+
+            <div class="slot-section">
+                <div class="row-between">
+                    <span class="section-eyebrow">Garment Slots</span>
+                    <span id="lockCounter" class="mono-meta">1 / 3 pinned</span>
+                </div>
+
+                <div class="slot-rail" id="slotRail">
+                    <button type="button" class="slot-pill editing locked" data-slot="top">
+                        <div class="slot-pill-top">
+                            <span class="slot-name">Top</span>
+                            <span class="slot-state" id="slotStateTop">PIN</span>
+                        </div>
+                        <div class="slot-chip-row">
+                            <span class="slot-dot" id="slotDotTop" style="background:#1D3557"></span>
+                            <span class="slot-hex" id="slotHexTop">#1D3557</span>
+                        </div>
+                    </button>
+
+                    <button type="button" class="slot-pill" data-slot="outerwear">
+                        <div class="slot-pill-top">
+                            <span class="slot-name">Outer</span>
+                            <span class="slot-state" id="slotStateOuterwear">AUTO</span>
+                        </div>
+                        <div class="slot-chip-row">
+                            <span class="slot-dot" id="slotDotOuterwear" style="background:transparent"></span>
+                            <span class="slot-hex" id="slotHexOuterwear">Auto</span>
+                        </div>
+                    </button>
+
+                    <button type="button" class="slot-pill" data-slot="bottom">
+                        <div class="slot-pill-top">
+                            <span class="slot-name">Bottom</span>
+                            <span class="slot-state" id="slotStateBottom">AUTO</span>
+                        </div>
+                        <div class="slot-chip-row">
+                            <span class="slot-dot" id="slotDotBottom" style="background:transparent"></span>
+                            <span class="slot-hex" id="slotHexBottom">Auto</span>
+                        </div>
+                    </button>
+
+                    <button type="button" class="slot-pill" data-slot="footwear">
+                        <div class="slot-pill-top">
+                            <span class="slot-name">Shoes</span>
+                            <span class="slot-state" id="slotStateFootwear">AUTO</span>
+                        </div>
+                        <div class="slot-chip-row">
+                            <span class="slot-dot" id="slotDotFootwear" style="background:transparent"></span>
+                            <span class="slot-hex" id="slotHexFootwear">Auto</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div id="colorStudioPane" class="studio-box">
+                <div class="sv-frame" id="svFrame">
+                    <canvas id="svCanvas" width="380" height="146"></canvas>
+                    <div id="svCursor" class="sv-cursor"></div>
+                </div>
+
+                <div class="hue-track-wrap">
+                    <div class="row-between">
+                        <span class="section-eyebrow">Hue</span>
+                        <span id="hsvMeta" class="mono-meta">215° · 67% · 34%</span>
+                    </div>
+                    <input type="range" id="hueSlider" min="0" max="360" value="215" class="hue-slider"
+                        aria-label="Hue angle" />
+                </div>
+
+                <div class="color-readout-bar">
+                    <div class="color-readout-left">
+                        <span id="liveChip" class="live-chip" style="background:#1D3557"></span>
+                        <input type="text" id="hexField" class="hex-field" value="#1D3557" maxlength="7"
+                            aria-label="Hex color code" />
+                        <span id="activeColorName" class="active-color-name">Navy</span>
+                    </div>
+                    <button id="pinToggleBtn" class="btn btn-outline btn-xs" type="button">Unpin</button>
+                </div>
+
+                <div>
+                    <div class="row-between" style="margin-bottom:7px;">
+                        <span class="section-eyebrow">Wardrobe Essentials</span>
+                        <span id="editingSlotLabel" class="mono-meta">Editing Top</span>
+                    </div>
+                    <div class="fabric-chips">
+                        <button type="button" class="fabric-chip" data-quick-hex="#F6F2E9" style="background:#F6F2E9"
+                            title="Ivory"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#E2D5BE" style="background:#E2D5BE"
+                            title="Sand"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#C19A6B" style="background:#C19A6B"
+                            title="Camel"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#C25934" style="background:#C25934"
+                            title="Terracotta"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#6E2632" style="background:#6E2632"
+                            title="Burgundy"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#55642F" style="background:#55642F"
+                            title="Olive"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#1E4231" style="background:#1E4231"
+                            title="Forest Green"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#3B5998" style="background:#3B5998"
+                            title="Denim Blue"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#1D3557" style="background:#1D3557"
+                            title="Navy"></button>
+                        <button type="button" class="fabric-chip" data-quick-hex="#232428" style="background:#232428"
+                            title="Off Black"></button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="photoPane" class="photo-box hidden">
+                <label id="uploadDropzone" class="dropzone">
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/bmp,image/gif"
+                        class="hidden" />
+                    <div class="dropzone-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v11m0-11l-4 4m4-4l4 4" />
+                        </svg>
+                    </div>
+                    <span class="dropzone-title">Drop a garment or outfit photo</span>
+                    <span class="dropzone-sub">Extracts fabric shade and visual style automatically, or click anywhere
+                        on the photo to assign that shade to your selected slot.</span>
+                </label>
+
+                <div id="photoInspector" class="photo-box hidden">
+                    <div class="click-mode-bar">
+                        <span class="section-eyebrow">Photo click sets</span>
+                        <div class="mini-seg" id="clickTargetGroup">
+                            <button type="button" class="mini-seg-btn active" data-click-mode="active">Selected
+                                Slot</button>
+                            <button type="button" class="mini-seg-btn" data-click-mode="auto">Auto-Detect</button>
+                        </div>
+                    </div>
+
+                    <div class="photo-stage">
+                        <div id="photoWrap" class="photo-wrap">
+                            <img id="uploadedPreview" alt="Uploaded garment preview" />
+                            <div id="roiOverlay" class="roi-overlay hidden"></div>
+                            <div id="pinsLayer" class="pins-layer"></div>
+                        </div>
+                    </div>
+
+                    <div class="row-between">
+                        <span id="photoMetaLabel" class="mono-meta">Click fabric to sample color</span>
+                        <div style="display:flex; gap:6px;">
+                            <button id="changePhotoBtn" class="btn btn-outline btn-xs" type="button">Replace</button>
+                            <button id="clearPhotoBtn" class="btn btn-outline btn-xs" type="button">Clear</button>
+                        </div>
+                    </div>
+
+                    <div class="row-between">
+                        <span class="section-eyebrow">Detected Pieces (Reassign slot anytime)</span>
+                        <button id="pinAllPhotoBtn" class="btn btn-outline btn-xs hidden" type="button">Pin All</button>
+                    </div>
+                    <div id="regionList" class="region-list"></div>
+
+                    <div id="auditCard" class="audit-card hidden">
+                        <div class="row-between">
+                            <div>
+                                <div class="section-eyebrow">Outfit Audit</div>
+                                <div id="auditVerdict"
+                                    style="font-family:var(--font-serif); font-size:15px; font-weight:600; margin-top:1px;">
+                                    —</div>
+                            </div>
+                            <span id="auditScorePill" class="audit-score-pill">—</span>
+                        </div>
+                        <p id="auditAdvice" class="audit-advice"></p>
+                        <div id="auditBars" class="audit-bars"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="prefs-grid">
+                <div>
+                    <span class="section-eyebrow">Occasion</span>
+                    <div class="seg-control" id="styleControl">
+                        <button type="button" class="seg-opt active" data-style="All">All</button>
+                        <button type="button" class="seg-opt" data-style="Casual">Casual</button>
+                        <button type="button" class="seg-opt" data-style="Formal">Formal</button>
+                    </div>
+                </div>
+                <div>
+                    <span class="section-eyebrow">Jacket Layer</span>
+                    <div class="seg-control" id="layerControl">
+                        <button type="button" class="seg-opt active" data-layer="any">Any</button>
+                        <button type="button" class="seg-opt" data-layer="with">Jacket</button>
+                        <button type="button" class="seg-opt" data-layer="without">Clean</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <section class="stage" aria-label="Recommended lookbook">
+            <div class="stage-bar">
+                <div>
+                    <div class="look-kicker">
+                        <h1 id="lookTitle" class="look-title">Look 01</h1>
+                        <span id="lookIndex" class="look-index">01 / 08</span>
+                    </div>
+                    <p id="stylistNote" class="stylist-note">Curating balanced harmonies from real outfits...</p>
+                </div>
+
+                <div class="stage-controls">
+                    <button id="prevLookBtn" class="btn btn-outline btn-sm" type="button"
+                        title="Previous look (Left Arrow)">&larr;</button>
+                    <button id="nextLookBtn" class="btn btn-outline btn-sm" type="button"
+                        title="Next look (Right Arrow)">&rarr;</button>
+                    <button id="shuffleBtn" class="btn btn-ink btn-sm" type="button"
+                        title="Shuffle combinations (Spacebar)">
+                        <span>Shuffle</span>
+                        <span class="kbd-hint">Space</span>
+                    </button>
+                    <button id="saveLookBtn" class="btn btn-outline btn-sm" type="button">Save Look</button>
+                    <button id="exportPngBtn" class="btn btn-outline btn-sm" type="button">Export PNG</button>
+                </div>
+            </div>
+
+            <div id="noticeStrip" class="notice-strip hidden"></div>
+
+            <div class="outfit-board" id="outfitBoard">
+                <div class="tier-upper" id="tierUpper">
+                    <article class="fabric-slab slab-upper slab-ink-light" id="slabTop" data-slab-role="top"
+                        style="background:#1D3557">
+                        <div class="slab-accent-edge hidden" id="accentTop"></div>
+                        <svg class="garment-watermark" width="104" height="104" viewBox="0 0 100 100" fill="none"
+                            stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M35 16 Q50 26 65 16 L84 26 L77 45 L67 40 L67 86 L33 86 L33 40 L23 45 L16 26 Z" />
+                            <path d="M40 18 Q50 28 60 18" />
+                        </svg>
+                        <div class="slab-head">
+                            <span class="slab-role-tag">Primary Top</span>
+                            <div class="slab-actions">
+                                <button type="button" class="slab-pill-btn" id="pinBtnTop"
+                                    data-pin-role="top">Pin</button>
+                            </div>
+                        </div>
+                        <div class="slab-foot">
+                            <div class="slab-color-name" id="nameTop">Navy</div>
+                            <div class="slab-meta-row">
+                                <button type="button" class="slab-hex-btn" id="hexBtnTop" data-copy-role="top"
+                                    title="Click to copy primary color hex">#1D3557</button>
+                                <button type="button" class="slab-accent-btn hidden" id="secBtnTop"
+                                    data-copy-sec-role="top" title="Secondary fabric trim color — click to copy hex">
+                                    <span class="accent-dot" id="secDotTop"></span>
+                                    <span id="secLabelTop"></span>
+                                </button>
+                            </div>
+                            <div class="slab-title" id="titleTop">Pinned piece</div>
+                        </div>
+                    </article>
+
+                    <article class="fabric-slab slab-upper slab-ink-light hidden" id="slabOuterwear"
+                        data-slab-role="outerwear" style="background:#3A4133">
+                        <div class="slab-accent-edge hidden" id="accentOuterwear"></div>
+                        <svg class="garment-watermark" width="104" height="104" viewBox="0 0 100 100" fill="none"
+                            stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                            aria-hidden="true">
+                            <path d="M34 14 L50 32 L66 14 L85 24 L78 58 L69 54 L69 88 L31 88 L31 54 L22 58 L15 24 Z" />
+                            <path d="M50 32 L50 88" />
+                            <path d="M34 14 L42 36 L50 32 L58 36 L66 14" />
+                        </svg>
+                        <div class="slab-head">
+                            <span class="slab-role-tag">Outerwear Layer</span>
+                            <div class="slab-actions">
+                                <button type="button" class="slab-pill-btn" id="pinBtnOuterwear"
+                                    data-pin-role="outerwear">Pin</button>
+                            </div>
+                        </div>
+                        <div class="slab-foot">
+                            <div class="slab-color-name" id="nameOuterwear">—</div>
+                            <div class="slab-meta-row">
+                                <button type="button" class="slab-hex-btn" id="hexBtnOuterwear"
+                                    data-copy-role="outerwear" title="Click to copy primary color hex">#------</button>
+                                <button type="button" class="slab-accent-btn hidden" id="secBtnOuterwear"
+                                    data-copy-sec-role="outerwear"
+                                    title="Secondary fabric trim color — click to copy hex">
+                                    <span class="accent-dot" id="secDotOuterwear"></span>
+                                    <span id="secLabelOuterwear"></span>
+                                </button>
+                            </div>
+                            <div class="slab-title" id="titleOuterwear">—</div>
+                        </div>
+                    </article>
+                </div>
+
+                <article class="fabric-slab slab-bottom slab-ink-dark" id="slabBottom" data-slab-role="bottom"
+                    style="background:#D8C8B4">
+                    <div class="slab-accent-edge hidden" id="accentBottom"></div>
+                    <svg class="garment-watermark" width="110" height="114" viewBox="0 0 100 110" fill="none"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                        aria-hidden="true">
+                        <path d="M27 10 L73 10 L77 100 L56 100 L50 44 L44 100 L23 100 Z" />
+                        <path d="M27 19 L73 19" />
+                        <path d="M50 10 L50 28" />
+                    </svg>
+                    <div class="slab-head">
+                        <span class="slab-role-tag">Bottom / Trousers</span>
+                        <div class="slab-actions">
+                            <button type="button" class="slab-pill-btn" id="pinBtnBottom"
+                                data-pin-role="bottom">Pin</button>
+                        </div>
+                    </div>
+                    <div class="slab-foot">
+                        <div class="slab-color-name" id="nameBottom">Beige</div>
+                        <div class="slab-meta-row">
+                            <button type="button" class="slab-hex-btn" id="hexBtnBottom" data-copy-role="bottom"
+                                title="Click to copy primary color hex">#D8C8B4</button>
+                            <button type="button" class="slab-accent-btn hidden" id="secBtnBottom"
+                                data-copy-sec-role="bottom" title="Secondary fabric trim color — click to copy hex">
+                                <span class="accent-dot" id="secDotBottom"></span>
+                                <span id="secLabelBottom"></span>
+                            </button>
+                        </div>
+                        <div class="slab-title" id="titleBottom">—</div>
+                    </div>
+                </article>
+
+                <article class="fabric-slab slab-footwear slab-ink-light" id="slabFootwear" data-slab-role="footwear"
+                    style="background:#232428">
+                    <div class="slab-accent-edge hidden" id="accentFootwear"></div>
+                    <svg class="garment-watermark" width="112" height="68" viewBox="0 0 120 72" fill="none"
+                        stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                        aria-hidden="true">
+                        <path d="M18 22 L42 22 L50 38 Q78 38 96 46 Q104 49 102 58 L16 58 L16 32 Z" />
+                        <path d="M16 52 L102 52" />
+                        <path d="M44 29 L56 34" />
+                    </svg>
+                    <div class="slab-head">
+                        <span class="slab-role-tag">Footwear</span>
+                        <div class="slab-actions">
+                            <button type="button" class="slab-pill-btn" id="pinBtnFootwear"
+                                data-pin-role="footwear">Pin</button>
+                        </div>
+                    </div>
+                    <div class="slab-foot">
+                        <div class="slab-color-name" id="nameFootwear">Off Black</div>
+                        <div class="slab-meta-row">
+                            <button type="button" class="slab-hex-btn" id="hexBtnFootwear" data-copy-role="footwear"
+                                title="Click to copy primary color hex">#232428</button>
+                            <button type="button" class="slab-accent-btn hidden" id="secBtnFootwear"
+                                data-copy-sec-role="footwear" title="Secondary fabric trim color — click to copy hex">
+                                <span class="accent-dot" id="secDotFootwear"></span>
+                                <span id="secLabelFootwear"></span>
+                            </button>
+                        </div>
+                        <div class="slab-title" id="titleFootwear">—</div>
+                    </div>
+                </article>
+
+                <div class="board-footer-bar">
+                    <div class="board-tags">
+                        <span id="harmonyPill" class="meta-pill meta-pill-strong">—</span>
+                        <span id="stylePill" class="meta-pill">—</span>
+                        <button id="addJacketInlineBtn" type="button" class="btn btn-outline btn-xs hidden">+ Add jacket
+                            layer</button>
+                    </div>
+                    <span class="mono-meta" id="matchScoreCompact">Harmony —</span>
+                </div>
+            </div>
+
+            <div id="lookbookStrip" class="lookbook-strip" aria-label="Curated palette options"></div>
+
+            <div class="science-card">
+                <button id="scienceToggleBtn" class="science-toggle" type="button" aria-expanded="false">
+                    <span>Match Details &amp; Color Map</span>
+                    <span id="scienceToggleIcon" class="mono-meta">Show +</span>
+                </button>
+                <div id="scienceBody" class="science-body hidden">
+                    <div class="hue-wheel-box">
+                        <svg id="oklabWheelSvg" width="136" height="136" viewBox="0 0 136 136"
+                            aria-label="Oklab hue harmony plot"></svg>
+                        <span class="mono-meta">Perceptual Hue Map</span>
+                    </div>
+                    <div class="science-metrics">
+                        <div class="metric-item">
+                            <div class="metric-lbl">Compatibility Score</div>
+                            <div id="sciCompat" class="metric-val">—</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-lbl">Color Distance (ΔE₀₀)</div>
+                            <div id="sciDeltaE" class="metric-val">—</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-lbl">Matching Mode</div>
+                            <div id="sciMode" class="metric-val">—</div>
+                        </div>
+                        <div class="metric-item">
+                            <div class="metric-lbl">Source Reference</div>
+                            <div id="sciSet" class="metric-val">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="drawerBackdrop" class="drawer-backdrop hidden"></div>
+    <aside id="savedDrawer" class="drawer hidden" aria-label="Saved looks">
+        <div class="row-between">
+            <div>
+                <div class="section-eyebrow">Saved Archive</div>
+                <h2 class="desk-title">Saved Looks</h2>
+            </div>
+            <button id="closeSavedBtn" class="btn btn-outline btn-xs" type="button">Close</button>
+        </div>
+        <p style="font-size:11.5px; color:var(--ink-muted);">Stored permanently in your HueFit folder across sessions
+            and browsers.</p>
+        <div id="savedList" class="saved-list"></div>
+    </aside>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <footer class="footer">
+        <span>HueFit · Outfit Color Recommender</span>
+        <span class="mono-meta">Shortcuts: Space Shuffle · ←/→ Browse · 1–4 Slot · D Theme</span>
+    </footer>
+
+    <script>
+        const ROLES = ["top", "outerwear", "bottom", "footwear"];
+        const ROLE_NAMES = {
+            top: "Top",
+            outerwear: "Outerwear",
+            bottom: "Bottom",
+            footwear: "Footwear"
+        };
+
+        const ANCHOR_NAMES = [
+            ["Black", "#141418"], ["Off Black", "#232428"], ["Charcoal", "#323741"], ["Slate Grey", "#55606E"],
+            ["Heather Grey", "#9CA3AF"], ["Light Grey", "#D1D5DB"], ["White", "#F9FAFB"], ["Ivory", "#F6F2E9"],
+            ["Cream", "#EFE9D5"], ["Beige", "#D8C8B4"], ["Sand", "#E2D5BE"], ["Taupe", "#8D847B"],
+            ["Camel", "#C19A6B"], ["Tan", "#C8A47B"], ["Cognac", "#9A4E24"], ["Brown", "#6B4423"],
+            ["Espresso", "#3B2418"], ["Navy", "#1D3557"], ["Midnight Blue", "#1A2744"], ["Denim Blue", "#3B5998"],
+            ["Cobalt Blue", "#1D4ED8"], ["Steel Blue", "#4A749C"], ["Sky Blue", "#67B7E8"], ["Baby Blue", "#A9D3F5"],
+            ["Teal", "#0F766E"], ["Turquoise", "#26B5A8"], ["Mint", "#9ADAC9"], ["Forest Green", "#1E4231"],
+            ["Pine Green", "#2B5B46"], ["Emerald", "#117A5B"], ["Olive", "#55642F"], ["Sage", "#8CA37A"],
+            ["Khaki", "#A99F79"], ["Burgundy", "#6E2632"], ["Wine", "#7E2B3E"], ["Crimson", "#A61C24"],
+            ["Red", "#CC292B"], ["Coral", "#E2725B"], ["Terracotta", "#C25934"], ["Rust", "#A84426"],
+            ["Orange", "#DC7018"], ["Peach", "#EBB18D"], ["Mustard", "#C99A2E"], ["Gold", "#C5A059"],
+            ["Yellow", "#E8BE2C"], ["Lemon", "#F5DF62"], ["Blush", "#E6B4B8"], ["Dusty Rose", "#C48494"],
+            ["Pink", "#E3669B"], ["Magenta", "#BA226A"], ["Plum", "#672C57"], ["Purple", "#6D34B8"],
+            ["Lavender", "#A393CC"], ["Lilac", "#C6B6EC"]
+        ];
+
+        function normalizeStoredTheme(val) {
+            if (val === "dark" || val === "studio") return "dark";
+            return "light";
+        }
+
+        const state = {
+            theme: normalizeStoredTheme(localStorage.getItem("huefit_theme")),
+            inputTab: "color",
+            photoClickMode: "active",
+            editingRole: "top",
+            locks: {
+                top: { hex: "#1D3557", secondary_hex: "#1D3557", primary_share: 1.0, region_index: null }
+            },
+            style: "All",
+            outerwearMode: "any",
+            uploadId: null,
+            uploadedRegions: [],
+            options: [],
+            matchIdx: 0,
+            shuffleSeed: 0,
+            scoringMode: "color_only",
+            lastLatencyMs: 0,
+            hsv: { h: 215, s: 0.67, v: 0.34 },
+            savedLooks: [],
+            recAbort: null,
+            sampleAbort: null,
+            recTimer: null,
+            toastTimer: null
+        };
+
+        const svCanvas = document.getElementById("svCanvas");
+        const svCtx = svCanvas.getContext("2d");
+        const svCursor = document.getElementById("svCursor");
+        const hueSlider = document.getElementById("hueSlider");
+        const hexField = document.getElementById("hexField");
+        const liveChip = document.getElementById("liveChip");
+
+        function hexToRgb(hex) {
+            const clean = (hex || "").replace("#", "");
+            if (!/^[0-9A-Fa-f]{6}$/.test(clean)) return null;
+            const n = parseInt(clean, 16);
+            return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + [r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("").toUpperCase();
+        }
+
+        function hsvToRgb(h, s, v) {
+            const c = v * s;
+            const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+            const m = v - c;
+            let r = 0, g = 0, b = 0;
+            if (h < 60) [r, g, b] = [c, x, 0];
+            else if (h < 120) [r, g, b] = [x, c, 0];
+            else if (h < 180) [r, g, b] = [0, c, x];
+            else if (h < 240) [r, g, b] = [0, x, c];
+            else if (h < 300) [r, g, b] = [x, 0, c];
+            else[r, g, b] = [c, 0, x];
+            return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+        }
+
+        function rgbToHsv(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+            let h = 0;
+            const s = max === 0 ? 0 : d / max;
+            if (max !== min) {
+                if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+                else if (max === g) h = (b - r) / d + 2;
+                else h = (r - g) / d + 4;
+                h *= 60;
+            }
+            return [Math.round(h) % 360, s, max];
+        }
+
+        function srgbToOklab(hex) {
+            const rgb = hexToRgb(hex) || [128, 128, 128];
+            const lin = rgb.map(v => {
+                const c = v / 255;
+                return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            const [r, g, b] = lin;
+            const l = Math.cbrt(Math.max(0, 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b));
+            const m = Math.cbrt(Math.max(0, 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b));
+            const s = Math.cbrt(Math.max(0, 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b));
+            return [
+                0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+            ];
+        }
+
+        const ANCHOR_LABS = ANCHOR_NAMES.map(([name, hx]) => ({ name, lab: srgbToOklab(hx) }));
+
+        function nameFromHex(hex) {
+            const lab = srgbToOklab(hex);
+            let best = "Neutral", bestD = 1e9;
+            for (const a of ANCHOR_LABS) {
+                const d = Math.hypot(lab[0] - a.lab[0], lab[1] - a.lab[1], lab[2] - a.lab[2]);
+                if (d < bestD) { bestD = d; best = a.name; }
+            }
+            return best;
+        }
+
+        function useDarkInk(hex) {
+            return srgbToOklab(hex)[0] > 0.64;
+        }
+
+        function lookKey(opt) {
+            if (!opt || !opt.colors) return "";
+            return [opt.set_id, opt.colors.top, opt.colors.outerwear || "", opt.colors.bottom, opt.colors.footwear].join("|");
+        }
+
+        function isCurrentLookSaved() {
+            if (!state.options.length) return false;
+            const curKey = lookKey(state.options[state.matchIdx]);
+            return state.savedLooks.some(s => lookKey(s) === curKey);
+        }
+
+        function updateSaveBtnState() {
+            const btn = document.getElementById("saveLookBtn");
+            const saved = isCurrentLookSaved();
+            btn.textContent = saved ? "Saved ✓" : "Save Look";
+            btn.classList.toggle("btn-saved", saved);
+        }
+
+        function showToast(msg) {
+            const el = document.getElementById("toast");
+            el.textContent = msg;
+            el.classList.remove("hidden");
+            clearTimeout(state.toastTimer);
+            state.toastTimer = setTimeout(() => el.classList.add("hidden"), 1700);
+        }
+
+        function showError(msg) {
+            const el = document.getElementById("errorStrip");
+            if (!msg) {
+                el.classList.add("hidden");
+                el.textContent = "";
+            } else {
+                el.textContent = msg;
+                el.classList.remove("hidden");
+            }
+        }
+
+        function applyTheme(theme) {
+            state.theme = theme === "dark" ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", state.theme);
+            localStorage.setItem("huefit_theme", state.theme);
+            document.querySelectorAll("[data-theme-set]").forEach(btn => {
+                btn.classList.toggle("active", btn.dataset.themeSet === state.theme);
+            });
+            if (state.options.length) drawOklabWheel(state.options[state.matchIdx]);
+        }
+
+        function setInputTab(tab) {
+            state.inputTab = tab === "photo" ? "photo" : "color";
+            document.querySelectorAll("[data-input-tab]").forEach(btn => {
+                const active = btn.dataset.inputTab === state.inputTab;
+                btn.classList.toggle("active", active);
+                btn.setAttribute("aria-selected", String(active));
+            });
+            document.getElementById("colorStudioPane").classList.toggle("hidden", state.inputTab !== "color");
+            document.getElementById("photoPane").classList.toggle("hidden", state.inputTab !== "photo");
+        }
+
+        function drawSV(hue) {
+            const w = svCanvas.width, h = svCanvas.height;
+            const [hr, hg, hb] = hsvToRgb(hue, 1, 1);
+            svCtx.fillStyle = `rgb(${hr},${hg},${hb})`;
+            svCtx.fillRect(0, 0, w, h);
+
+            const wg = svCtx.createLinearGradient(0, 0, w, 0);
+            wg.addColorStop(0, "rgba(255,255,255,1)");
+            wg.addColorStop(1, "rgba(255,255,255,0)");
+            svCtx.fillStyle = wg;
+            svCtx.fillRect(0, 0, w, h);
+
+            const bg = svCtx.createLinearGradient(0, 0, 0, h);
+            bg.addColorStop(0, "rgba(0,0,0,0)");
+            bg.addColorStop(1, "rgba(0,0,0,1)");
+            svCtx.fillStyle = bg;
+            svCtx.fillRect(0, 0, w, h);
+        }
+
+        function syncPickerFromHex(hex) {
+            const rgb = hexToRgb(hex);
+            if (!rgb) return;
+            const [h, s, v] = rgbToHsv(rgb[0], rgb[1], rgb[2]);
+            state.hsv = { h, s, v };
+            drawSV(h);
+            hueSlider.value = h;
+            svCursor.style.left = `${(s * 100).toFixed(1)}%`;
+            svCursor.style.top = `${((1 - v) * 100).toFixed(1)}%`;
+            liveChip.style.backgroundColor = hex;
+            hexField.value = hex;
+            document.getElementById("activeColorName").textContent = nameFromHex(hex);
+            document.getElementById("hsvMeta").textContent = `${h}° · ${Math.round(s * 100)}% · ${Math.round(v * 100)}%`;
+        }
+
+        function renderSlotRail() {
+            const lockedCount = Object.keys(state.locks).length;
+            document.getElementById("lockCounter").textContent = `${lockedCount} / 3 pinned`;
+            document.getElementById("editingSlotLabel").textContent = `Editing ${ROLE_NAMES[state.editingRole]}`;
+
+            ROLES.forEach(role => {
+                const cap = role.charAt(0).toUpperCase() + role.slice(1);
+                const pill = document.querySelector(`[data-slot="${role}"]`);
+                const stEl = document.getElementById(`slotState${cap}`);
+                const dotEl = document.getElementById(`slotDot${cap}`);
+                const hxEl = document.getElementById(`slotHex${cap}`);
+                const lock = state.locks[role];
+
+                pill.classList.toggle("editing", state.editingRole === role);
+                pill.classList.toggle("locked", Boolean(lock));
+
+                if (lock) {
+                    stEl.textContent = lock.region_index !== null && state.uploadId ? "PHOTO" : "PIN";
+                    dotEl.style.backgroundColor = lock.hex;
+                    hxEl.textContent = lock.hex;
+                } else {
+                    stEl.textContent = "AUTO";
+                    dotEl.style.backgroundColor = "transparent";
+                    hxEl.textContent = "Auto";
+                }
+            });
+
+            const isActiveLocked = Boolean(state.locks[state.editingRole]);
+            document.getElementById("pinToggleBtn").textContent = isActiveLocked ? "Unpin" : "Pin Slot";
+        }
+
+        function setSlotLock(role, hex, opts = {}) {
+            const lockedKeys = Object.keys(state.locks);
+            if (!state.locks[role] && lockedKeys.length >= 3) {
+                showToast("Maximum 3 pieces pinned — unpin one first");
+                return false;
+            }
+            const cleanHex = hex.toUpperCase();
+            state.locks[role] = {
+                hex: cleanHex,
+                secondary_hex: (opts.secondary_hex || cleanHex).toUpperCase(),
+                primary_share: typeof opts.primary_share === "number" ? opts.primary_share : 1.0,
+                region_index: opts.region_index !== undefined ? opts.region_index : null
+            };
+            if (role === "outerwear" && state.outerwearMode === "without") {
+                setOuterwearMode("with", false);
+            }
+            state.editingRole = role;
+            state.shuffleSeed = 0;
+            syncPickerFromHex(cleanHex);
+            renderSlotRail();
+            return true;
+        }
+
+        function unlockSlot(role) {
+            if (!state.locks[role]) return;
+            if (Object.keys(state.locks).length <= 1) {
+                showToast("Keep at least 1 piece pinned");
+                return;
+            }
+            delete state.locks[role];
+            renderSlotRail();
+            queueRecommend(true);
+        }
+
+        function setStyleFilter(val, autoFetch = true) {
+            state.style = val;
+            state.shuffleSeed = 0;
+            document.querySelectorAll("#styleControl .seg-opt").forEach(btn => {
+                btn.classList.toggle("active", btn.dataset.style === val);
+            });
+            if (autoFetch) queueRecommend(true);
+        }
+
+        function setOuterwearMode(val, autoFetch = true) {
+            if (val === "without" && state.locks.outerwear) {
+                if (Object.keys(state.locks).length <= 1) {
+                    showToast("Unpin Outerwear before switching to Clean 3-piece");
+                    return;
+                }
+                delete state.locks.outerwear;
+                renderSlotRail();
+            }
+            state.outerwearMode = val;
+            state.shuffleSeed = 0;
+            document.querySelectorAll("#layerControl .seg-opt").forEach(btn => {
+                btn.classList.toggle("active", btn.dataset.layer === val);
+            });
+            if (autoFetch) queueRecommend(true);
+        }
+
+        function queueRecommend(immediate = false) {
+            clearTimeout(state.recTimer);
+            if (immediate) fetchRecommendation();
+            else state.recTimer = setTimeout(fetchRecommendation, 70);
+        }
+
+        async function fetchRecommendation() {
+            if (!Object.keys(state.locks).length) return;
+
+            if (state.recAbort) state.recAbort.abort();
+            state.recAbort = new AbortController();
+
+            try {
+                const res = await fetch("/api/recommend", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        locks: state.locks,
+                        style: state.style,
+                        outerwear_mode: state.outerwearMode,
+                        upload_id: state.uploadId,
+                        shuffle_seed: state.shuffleSeed,
+                        top_k: 8
+                    }),
+                    signal: state.recAbort.signal
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: "Recommendation failed." }));
+                    showError(err.detail || "Recommendation failed.");
+                    return;
+                }
+                const data = await res.json();
+                showError("");
+                state.options = data.options || [];
+                state.scoringMode = data.scoring_mode || "color_only";
+                state.lastLatencyMs = data.latency_ms || 0;
+                state.matchIdx = 0;
+
+                const notices = [data.filter_notice, data.mode_notice].filter(Boolean);
+                const noticeEl = document.getElementById("noticeStrip");
+                if (notices.length) {
+                    noticeEl.textContent = notices.join(" · ");
+                    noticeEl.classList.remove("hidden");
+                } else {
+                    noticeEl.classList.add("hidden");
+                }
+
+                if (state.options.length) renderLook(0);
+            } catch (err) {
+                if (err && err.name === "AbortError") return;
+                showError("Unable to reach local HueFit server.");
+            }
+        }
+
+        function buildStylistNote(opt) {
+            const pieces = opt.has_outerwear ? "4-piece layered" : "clean 3-piece";
+            const h = (opt.harmony_label || "balanced").toLowerCase();
+            return `A ${pieces} ${opt.style.toLowerCase()} pairing built on ${h} — ${opt.compat_score}% cohesion.`;
+        }
+
+        function renderSlab(role, opt) {
+            const cap = role.charAt(0).toUpperCase() + role.slice(1);
+            const slab = document.getElementById(`slab${cap}`);
+            const accent = document.getElementById(`accent${cap}`);
+            const pinBtn = document.getElementById(`pinBtn${cap}`);
+            const nameEl = document.getElementById(`name${cap}`);
+            const hexBtn = document.getElementById(`hexBtn${cap}`);
+            const secBtn = document.getElementById(`secBtn${cap}`);
+            const secDot = document.getElementById(`secDot${cap}`);
+            const secLabel = document.getElementById(`secLabel${cap}`);
+            const titleEl = document.getElementById(`title${cap}`);
+
+            const hexVal = opt.colors[role];
+            if (!hexVal) {
+                if (role === "outerwear") slab.classList.add("hidden");
+                return;
+            }
+            if (role === "outerwear") slab.classList.remove("hidden");
+
+            slab.style.backgroundColor = hexVal;
+            const darkInk = useDarkInk(hexVal);
+            slab.classList.toggle("slab-ink-dark", darkInk);
+            slab.classList.toggle("slab-ink-light", !darkInk);
+
+            const isPinned = Boolean(state.locks[role]);
+            const isPhoto = isPinned && state.locks[role].region_index !== null && Boolean(state.uploadId);
+            pinBtn.textContent = isPinned ? (isPhoto ? "Photo Pin" : "Pinned") : "Pin";
+            pinBtn.classList.toggle("is-pinned", isPinned);
+
+            nameEl.textContent = (opt.color_names && opt.color_names[role]) || nameFromHex(hexVal);
+            hexBtn.textContent = hexVal;
+
+            const secHex = opt.secondary_colors ? opt.secondary_colors[role] : null;
+            const secName = (opt.secondary_color_names && opt.secondary_color_names[role]) || (secHex ? nameFromHex(secHex) : null);
+            const share = opt.primary_shares ? opt.primary_shares[role] : 1.0;
+
+            if (secHex && secHex !== hexVal && typeof share === "number" && share <= 0.88) {
+                const trimPct = Math.round((1 - share) * 100);
+                accent.style.backgroundColor = secHex;
+                accent.classList.remove("hidden");
+                secDot.style.backgroundColor = secHex;
+                secLabel.textContent = `Accent: ${secName} ${secHex} · ${trimPct}%`;
+                secBtn.classList.remove("hidden");
+            } else {
+                accent.classList.add("hidden");
+                secBtn.classList.add("hidden");
+            }
+
+            titleEl.textContent = isPinned
+                ? (isPhoto ? "Pinned from your uploaded photo" : "Pinned in Styling Desk")
+                : ((opt.titles && opt.titles[role]) || ROLE_NAMES[role]);
+        }
+
+        function drawOklabWheel(opt) {
+            const svg = document.getElementById("oklabWheelSvg");
+            const cx = 68, cy = 68, rMax = 52;
+            const ringCol = getComputedStyle(document.documentElement).getPropertyValue("--ring-stroke").trim() || "#d7d2c7";
+            const mutedInk = getComputedStyle(document.documentElement).getPropertyValue("--ink-muted").trim() || "#6e6960";
+
+            const pts = [];
+            ROLES.forEach(role => {
+                const hx = opt.colors[role];
+                if (!hx) return;
+                const lab = srgbToOklab(hx);
+                const scale = rMax / 0.28;
+                const dx = Math.max(-rMax, Math.min(rMax, lab[1] * scale));
+                const dy = Math.max(-rMax, Math.min(rMax, -lab[2] * scale));
+                pts.push({ role, hex: hx, x: cx + dx, y: cy + dy });
+            });
+
+            let html = `
+        <circle cx="${cx}" cy="${cy}" r="${rMax}" fill="none" stroke="${ringCol}" stroke-width="1" />
+        <circle cx="${cx}" cy="${cy}" r="${(rMax * 0.52).toFixed(1)}" fill="none" stroke="${ringCol}" stroke-dasharray="2 3" stroke-width="1" />
+        <circle cx="${cx}" cy="${cy}" r="10" fill="none" stroke="${ringCol}" stroke-width="1" />
+        <line x1="${cx - rMax}" y1="${cy}" x2="${cx + rMax}" y2="${cy}" stroke="${ringCol}" stroke-width="0.7" />
+        <line x1="${cx}" y1="${cy - rMax}" x2="${cx}" y2="${cy + rMax}" stroke="${ringCol}" stroke-width="0.7" />
+      `;
+
+            if (pts.length >= 2) {
+                const poly = pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+                html += `<polygon points="${poly}" fill="none" stroke="${mutedInk}" stroke-width="1.2" stroke-opacity="0.55" />`;
+            }
+
+            pts.forEach(p => {
+                html += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="7.5" fill="${p.hex}" stroke="#ffffff" stroke-width="1.8" />`;
+            });
+
+            svg.innerHTML = html;
+        }
+
+        function renderLookbookStrip() {
+            const strip = document.getElementById("lookbookStrip");
+            strip.innerHTML = "";
+            state.options.forEach((opt, i) => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = `mini-look ${i === state.matchIdx ? "active" : ""}`;
+                const upperSpans = opt.has_outerwear && opt.colors.outerwear
+                    ? `<span style="background:${opt.colors.top}"></span><span style="background:${opt.colors.outerwear}"></span>`
+                    : `<span style="background:${opt.colors.top}"></span>`;
+                btn.innerHTML = `
+          <div class="mini-stack">
+            <div class="mini-top-row">${upperSpans}</div>
+            <div class="mini-bot" style="background:${opt.colors.bottom}"></div>
+            <div class="mini-shoe" style="background:${opt.colors.footwear}"></div>
+          </div>
+          <div class="mini-look-foot">
+            <span>${String(i + 1).padStart(2, "0")}</span>
+            <span>${Math.round(opt.compat_score)}%</span>
+          </div>
+        `;
+                btn.addEventListener("click", () => renderLook(i));
+                strip.appendChild(btn);
+            });
+        }
+
+        function renderLook(idx) {
+            if (!state.options.length) return;
+            state.matchIdx = ((idx % state.options.length) + state.options.length) % state.options.length;
+            const opt = state.options[state.matchIdx];
+            const total = state.options.length;
+
+            document.getElementById("lookTitle").textContent = `Look ${String(state.matchIdx + 1).padStart(2, "0")}`;
+            document.getElementById("lookIndex").textContent = `${String(state.matchIdx + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`;
+            document.getElementById("stylistNote").textContent = buildStylistNote(opt);
+
+            const tierUpper = document.getElementById("tierUpper");
+            const hasOuter = Boolean(opt.has_outerwear && opt.colors.outerwear);
+            tierUpper.classList.toggle("is-four-piece", hasOuter);
+            document.getElementById("addJacketInlineBtn").classList.toggle("hidden", hasOuter);
+
+            ROLES.forEach(role => renderSlab(role, opt));
+
+            document.getElementById("harmonyPill").textContent = opt.harmony_label || "Balanced Palette";
+            document.getElementById("stylePill").textContent = `${opt.style} · ${hasOuter ? "4-Piece" : "3-Piece"}`;
+            document.getElementById("matchScoreCompact").textContent = `Harmony ${opt.compat_score}%`;
+
+            document.getElementById("sciCompat").textContent = `${opt.compat_score}%`;
+            document.getElementById("sciDeltaE").textContent = `ΔE₀₀ = ${opt.delta_e2000}`;
+            document.getElementById("sciMode").textContent =
+                `${state.scoringMode === "multimodal" ? "Photo + Visual" : "Perceptual Color"} · ${state.lastLatencyMs} ms`;
+            document.getElementById("sciSet").textContent = `Set #${opt.set_id}`;
+
+            drawOklabWheel(opt);
+            renderLookbookStrip();
+            updateSaveBtnState();
+        }
+
+        function renderPhotoPins(regions, overridePin = null) {
+            const layer = document.getElementById("pinsLayer");
+            layer.innerHTML = "";
+            if (overridePin) {
+                const pin = document.createElement("div");
+                pin.className = "photo-pin";
+                pin.style.left = `${overridePin.x_pct}%`;
+                pin.style.top = `${overridePin.y_pct}%`;
+                pin.style.backgroundColor = overridePin.hex;
+                pin.textContent = "•";
+                layer.appendChild(pin);
+                return;
+            }
+            regions.forEach((reg, idx) => {
+                const pin = document.createElement("div");
+                pin.className = "photo-pin";
+                pin.style.left = `${reg.x_pct}%`;
+                pin.style.top = `${reg.y_pct}%`;
+                pin.style.backgroundColor = reg.hex;
+                pin.textContent = String(idx + 1);
+                layer.appendChild(pin);
+            });
+        }
+
+        function renderAudit(audit) {
+            const card = document.getElementById("auditCard");
+            if (!audit) {
+                card.classList.add("hidden");
+                return;
+            }
+            card.classList.remove("hidden");
+            document.getElementById("auditVerdict").textContent = audit.verdict;
+            const pill = document.getElementById("auditScorePill");
+            pill.textContent = `${audit.overall_compat_pct}%`;
+            pill.className = "audit-score-pill" + (audit.overall_compat_pct < 55 ? " is-low" : (audit.overall_compat_pct < 75 ? " is-mid" : ""));
+            document.getElementById("auditAdvice").textContent = audit.advice;
+
+            const bars = document.getElementById("auditBars");
+            bars.innerHTML = "";
+            (audit.item_scores || []).forEach(it => {
+                const isWeak = it.role === audit.weakest_role && audit.overall_compat_pct < 75;
+                const col = isWeak ? "var(--bad)" : (it.fit_score >= 60 ? "var(--good)" : "var(--warn)");
+                const row = document.createElement("div");
+                row.className = "audit-row";
+                row.innerHTML = `
+          <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${it.label}</span>
+          <div class="audit-track"><div class="audit-fill" style="width:${Math.min(100, Math.max(5, it.fit_score))}%; background:${col};"></div></div>
+          <span class="mono-meta" style="text-align:right; color:${col};">${it.fit_score}%</span>
+        `;
+                bars.appendChild(row);
+            });
+        }
+
+        function renderDetectedRegions() {
+            const list = document.getElementById("regionList");
+            list.innerHTML = "";
+            state.uploadedRegions.forEach((reg, idx) => {
+                const row = document.createElement("div");
+                row.className = "region-row";
+
+                const mainBtn = document.createElement("button");
+                mainBtn.type = "button";
+                mainBtn.className = "region-main";
+                mainBtn.innerHTML = `
+          <span class="region-swatch" style="background:${reg.hex}"></span>
+          <div class="region-meta">
+            <div class="region-name">${idx + 1}. ${reg.color_name}</div>
+            <div class="region-hex">${reg.hex}</div>
+          </div>
+        `;
+                mainBtn.addEventListener("click", () => {
+                    if (setSlotLock(reg.role || "top", reg.hex, {
+                        secondary_hex: reg.secondary_hex,
+                        primary_share: reg.primary_share,
+                        region_index: reg.region_index
+                    })) {
+                        queueRecommend(true);
+                    }
+                });
+
+                const sel = document.createElement("select");
+                sel.className = "role-select";
+                sel.setAttribute("aria-label", `Assign garment ${idx + 1} slot`);
+                ROLES.forEach(r => {
+                    const o = document.createElement("option");
+                    o.value = r;
+                    o.textContent = ROLE_NAMES[r];
+                    if (r === reg.role) o.selected = true;
+                    sel.appendChild(o);
+                });
+                sel.addEventListener("change", () => {
+                    const oldRole = reg.role;
+                    const newRole = sel.value;
+                    const hadOldOwnLock = Boolean(state.locks[oldRole] && state.locks[oldRole].region_index === reg.region_index);
+                    const lockedAfterRemove = Object.keys(state.locks).length - (hadOldOwnLock ? 1 : 0);
+                    if (!state.locks[newRole] && lockedAfterRemove >= 3) {
+                        sel.value = oldRole;
+                        showToast("Maximum 3 pieces pinned — unpin one first");
+                        return;
+                    }
+                    if (hadOldOwnLock) delete state.locks[oldRole];
+                    reg.role = newRole;
+                    setSlotLock(newRole, reg.hex, {
+                        secondary_hex: reg.secondary_hex,
+                        primary_share: reg.primary_share,
+                        region_index: reg.region_index
+                    });
+                    showToast(`Assigned piece ${idx + 1} to ${ROLE_NAMES[newRole]}`);
+                    queueRecommend(true);
+                });
+
+                row.appendChild(mainBtn);
+                row.appendChild(sel);
+                list.appendChild(row);
+            });
+
+            document.getElementById("pinAllPhotoBtn").classList.toggle("hidden", state.uploadedRegions.length < 2);
+        }
+
+        async function handleUpload(file) {
+            if (!file) return;
+            showError("");
+            setInputTab("photo");
+
+            const reader = new FileReader();
+            reader.onload = ev => { document.getElementById("uploadedPreview").src = ev.target.result; };
+            reader.readAsDataURL(file);
+
+            document.getElementById("uploadDropzone").classList.add("hidden");
+            document.getElementById("photoInspector").classList.remove("hidden");
+            document.getElementById("photoMetaLabel").textContent = "Analyzing garment...";
+
+            const fd = new FormData();
+            fd.append("file", file);
+
+            try {
+                const res = await fetch("/api/analyze-image", { method: "POST", body: fd });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ detail: "Unable to analyze image." }));
+                    showError(err.detail || "Unable to analyze image.");
+                    document.getElementById("uploadDropzone").classList.remove("hidden");
+                    document.getElementById("photoInspector").classList.add("hidden");
+                    return;
+                }
+                const data = await res.json();
+                state.uploadId = data.upload_id;
+                state.uploadedRegions = data.regions || [];
+                document.getElementById("photoActiveDot").classList.remove("hidden");
+                document.getElementById("photoMetaLabel").textContent = "Click fabric to sample color";
+
+                const roi = document.getElementById("roiOverlay");
+                if (data.roi_box) {
+                    const [x1, y1, x2, y2] = data.roi_box;
+                    roi.style.left = `${x1 * 100}%`;
+                    roi.style.top = `${y1 * 100}%`;
+                    roi.style.width = `${(x2 - x1) * 100}%`;
+                    roi.style.height = `${(y2 - y1) * 100}%`;
+                    roi.classList.remove("hidden");
+                } else {
+                    roi.classList.add("hidden");
+                }
+
+                renderPhotoPins(state.uploadedRegions);
+                renderDetectedRegions();
+                renderAudit(data.outfit_audit);
+
+                if (state.uploadedRegions.length) {
+                    const r0 = state.uploadedRegions[0];
+                    state.locks = {};
+                    setSlotLock(r0.role || "top", r0.hex, {
+                        secondary_hex: r0.secondary_hex,
+                        primary_share: r0.primary_share,
+                        region_index: r0.region_index
+                    });
+                    queueRecommend(true);
+                }
+            } catch (_) {
+                showError("Photo upload failed — verify local server is running.");
+            }
+        }
+
+        async function loadSavedLooksFromDisk() {
+            try {
+                const legacyRaw = localStorage.getItem("huefit_saved_looks");
+                if (legacyRaw) {
+                    const legacyList = JSON.parse(legacyRaw);
+                    if (Array.isArray(legacyList)) {
+                        for (const item of legacyList.reverse()) {
+                            if (item && item.colors && item.set_id) {
+                                await fetch("/api/saved-looks", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(item)
+                                }).catch(() => { });
+                            }
+                        }
+                    }
+                    localStorage.removeItem("huefit_saved_looks");
+                }
+            } catch (_) { }
+
+            try {
+                const res = await fetch("/api/saved-looks");
+                if (res.ok) {
+                    const data = await res.json();
+                    state.savedLooks = data.looks || [];
+                }
+            } catch (_) { }
+            document.getElementById("savedCountBadge").textContent = String(state.savedLooks.length);
+            updateSaveBtnState();
+        }
+
+        function renderSavedDrawer() {
+            const list = document.getElementById("savedList");
+            list.innerHTML = "";
+            if (!state.savedLooks.length) {
+                list.innerHTML = `<p style="font-size:12.5px; color:var(--ink-muted);">No saved looks yet. Click <strong>Save Look</strong> on any combination you want to keep.</p>`;
+                return;
+            }
+            state.savedLooks.forEach((item, idx) => {
+                const card = document.createElement("div");
+                card.className = "saved-card";
+                const upperSpans = item.has_outerwear && item.colors.outerwear
+                    ? `<span style="background:${item.colors.top}"></span><span style="background:${item.colors.outerwear}"></span>`
+                    : `<span style="background:${item.colors.top}"></span>`;
+                card.innerHTML = `
+          <div class="saved-mini-stack">
+            <div class="mini-top-row">${upperSpans}</div>
+            <div class="mini-bot" style="background:${item.colors.bottom}"></div>
+            <div class="mini-shoe" style="background:${item.colors.footwear}"></div>
+          </div>
+          <div class="saved-info">
+            <div class="saved-title">${item.harmony_label || "Curated Look"}</div>
+            <div class="saved-sub">${item.style} · ${item.compat_score}% · ${item.has_outerwear ? "4-Piece" : "3-Piece"}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:5px;">
+            <button type="button" class="btn btn-outline btn-xs" data-restore-saved="${idx}">Load</button>
+            <button type="button" class="btn btn-outline btn-xs" data-del-saved="${idx}">Remove</button>
+          </div>
+        `;
+                list.appendChild(card);
+            });
+
+            list.querySelectorAll("[data-restore-saved]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const saved = state.savedLooks[parseInt(btn.dataset.restoreSaved, 10)];
+                    if (!saved) return;
+                    const nextLocks = {};
+                    const rolesToLock = (saved.locked_roles && saved.locked_roles.length) ? saved.locked_roles : ["top"];
+                    rolesToLock.slice(0, 3).forEach(r => {
+                        if (saved.colors && saved.colors[r]) {
+                            nextLocks[r] = {
+                                hex: saved.colors[r],
+                                secondary_hex: (saved.secondary_colors && saved.secondary_colors[r]) || saved.colors[r],
+                                primary_share: (saved.primary_shares && saved.primary_shares[r]) || 1.0,
+                                region_index: null
+                            };
+                        }
+                    });
+                    if (!Object.keys(nextLocks).length && saved.colors?.top) {
+                        nextLocks.top = { hex: saved.colors.top, secondary_hex: saved.colors.top, primary_share: 1.0, region_index: null };
+                    }
+                    state.locks = nextLocks;
+                    state.editingRole = Object.keys(nextLocks)[0] || "top";
+                    setOuterwearMode(saved.has_outerwear ? "with" : "without", false);
+                    if (saved.style === "Casual" || saved.style === "Formal") setStyleFilter(saved.style, false);
+                    else setStyleFilter("All", false);
+
+                    state.options = [saved, ...state.options.filter(o => lookKey(o) !== lookKey(saved)).slice(0, 7)];
+                    syncPickerFromHex(state.locks[state.editingRole].hex);
+                    renderSlotRail();
+                    renderLook(0);
+                    toggleDrawer(false);
+                    showToast("Loaded saved look");
+                });
+            });
+
+            list.querySelectorAll("[data-del-saved]").forEach(btn => {
+                btn.addEventListener("click", async () => {
+                    const idx = parseInt(btn.dataset.delSaved, 10);
+                    const item = state.savedLooks[idx];
+                    if (!item) return;
+                    if (item.saved_id) {
+                        await fetch(`/api/saved-looks/${encodeURIComponent(item.saved_id)}`, { method: "DELETE" }).catch(() => { });
+                    }
+                    state.savedLooks.splice(idx, 1);
+                    document.getElementById("savedCountBadge").textContent = String(state.savedLooks.length);
+                    renderSavedDrawer();
+                    updateSaveBtnState();
+                });
+            });
+        }
+
+        function toggleDrawer(open) {
+            document.getElementById("drawerBackdrop").classList.toggle("hidden", !open);
+            document.getElementById("savedDrawer").classList.toggle("hidden", !open);
+            if (open) renderSavedDrawer();
+        }
+
+        function exportLookcardPng() {
+            if (!state.options.length) return;
+            const opt = state.options[state.matchIdx];
+            const isDark = state.theme === "dark";
+            const W = 900, H = 1240;
+            const c = document.createElement("canvas");
+            c.width = W; c.height = H;
+            const ctx = c.getContext("2d");
+
+            ctx.fillStyle = isDark ? "#0D0C0B" : "#F5F3EE";
+            ctx.fillRect(0, 0, W, H);
+
+            ctx.fillStyle = isDark ? "#F4F1EA" : "#161616";
+            ctx.font = '600 44px Georgia, "Times New Roman", serif';
+            ctx.fillText("HueFit", 64, 96);
+
+            ctx.fillStyle = isDark ? "#B9B3A8" : "#56524B";
+            ctx.font = '600 17px system-ui, sans-serif';
+            ctx.fillText(`LOOK ${String(state.matchIdx + 1).padStart(2, "0")}  ·  ${(opt.harmony_label || "").toUpperCase()}`, 64, 134);
+
+            ctx.textAlign = "right";
+            ctx.fillStyle = isDark ? "#F4F1EA" : "#161616";
+            ctx.font = '700 22px ui-monospace, Consolas, monospace';
+            ctx.fillText(`${opt.compat_score}% HARMONY`, W - 64, 96);
+            ctx.fillStyle = isDark ? "#8F897F" : "#6E6960";
+            ctx.font = '500 16px ui-monospace, Consolas, monospace';
+            ctx.fillText(`${opt.style} · ${opt.has_outerwear ? "4-Piece" : "3-Piece"}`, W - 64, 134);
+            ctx.textAlign = "left";
+
+            function drawRoundedSlab(x, y, w, h, role) {
+                const hx = opt.colors[role];
+                const cname = (opt.color_names && opt.color_names[role]) || nameFromHex(hx);
+                const title = (opt.titles && opt.titles[role]) || ROLE_NAMES[role];
+                const secHex = opt.secondary_colors ? opt.secondary_colors[role] : null;
+                const secName = (opt.secondary_color_names && opt.secondary_color_names[role]) || (secHex ? nameFromHex(secHex) : null);
+                const share = opt.primary_shares ? opt.primary_shares[role] : 1.0;
+                const hasTrim = Boolean(secHex && secHex !== hx && typeof share === "number" && share <= 0.88);
+                const ink = useDarkInk(hx) ? "#161616" : "#F6F5F1";
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, 20);
+                ctx.clip();
+
+                ctx.fillStyle = hx;
+                ctx.fillRect(x, y, w, h);
+
+                if (hasTrim) {
+                    ctx.fillStyle = secHex;
+                    ctx.fillRect(x + w - 20, y, 20, h);
+                    ctx.fillStyle = "rgba(255,255,255,0.28)";
+                    ctx.fillRect(x + w - 21, y, 1, h);
+                }
+
+                ctx.fillStyle = ink;
+                ctx.globalAlpha = 0.74;
+                ctx.font = '700 15px system-ui, sans-serif';
+                ctx.fillText(ROLE_NAMES[role].toUpperCase(), x + 28, y + 38);
+
+                ctx.globalAlpha = 1.0;
+                ctx.font = '600 34px Georgia, serif';
+                ctx.fillText(cname, x + 28, y + h - 66);
+
+                ctx.globalAlpha = 0.88;
+                ctx.font = '600 17px ui-monospace, Consolas, monospace';
+                const hexText = hasTrim ? `${hx}  +  ${secName} ${secHex}` : hx;
+                ctx.fillText(hexText, x + 28, y + h - 34);
+
+                const hexW = ctx.measureText(hexText).width;
+                const availW = w - (hasTrim ? 46 : 28) - (28 + hexW + 22);
+                if (availW > 95) {
+                    ctx.globalAlpha = 0.72;
+                    ctx.font = '500 16px system-ui, sans-serif';
+                    let clipped = title;
+                    while (clipped.length > 6 && ctx.measureText(clipped).width > availW) {
+                        clipped = clipped.slice(0, -2) + "…";
+                    }
+                    ctx.fillText(clipped, x + 28 + hexW + 22, y + h - 34);
+                }
+                ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x, y, w, h, 20);
+                ctx.strokeStyle = "rgba(128,128,128,0.28)";
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            const pad = 64, fullW = W - pad * 2, gap = 18;
+            const hasOuter = Boolean(opt.has_outerwear && opt.colors.outerwear);
+
+            if (hasOuter) {
+                const halfW = (fullW - gap) / 2;
+                drawRoundedSlab(pad, 174, halfW, 330, "top");
+                drawRoundedSlab(pad + halfW + gap, 174, halfW, 330, "outerwear");
+            } else {
+                drawRoundedSlab(pad, 174, fullW, 330, "top");
+            }
+            drawRoundedSlab(pad, 522, fullW, 355, "bottom");
+            drawRoundedSlab(pad, 895, fullW, 215, "footwear");
+
+            ctx.fillStyle = isDark ? "#8F897F" : "#6E6960";
+            ctx.font = '500 15px system-ui, sans-serif';
+            ctx.fillText("HueFit · Outfit Color Recommender", pad, H - 52);
+
+            const link = document.createElement("a");
+            link.download = `huefit-look-${String(state.matchIdx + 1).padStart(2, "0")}.png`;
+            link.href = c.toDataURL("image/png");
+            link.click();
+            showToast("Exported lookcard PNG");
+        }
+
+        document.querySelectorAll("[data-theme-set]").forEach(btn => {
+            btn.addEventListener("click", () => applyTheme(btn.dataset.themeSet));
+        });
+
+        document.querySelectorAll("[data-input-tab]").forEach(btn => {
+            btn.addEventListener("click", () => setInputTab(btn.dataset.inputTab));
+        });
+
+        document.querySelectorAll("[data-slot]").forEach(pill => {
+            pill.addEventListener("click", () => {
+                const role = pill.dataset.slot;
+                state.editingRole = role;
+                if (state.locks[role]) {
+                    syncPickerFromHex(state.locks[role].hex);
+                } else if (state.options.length && state.options[state.matchIdx].colors[role]) {
+                    syncPickerFromHex(state.options[state.matchIdx].colors[role]);
+                }
+                renderSlotRail();
+            });
+        });
+
+        let draggingSV = false;
+        function applyColorEdit(hex, immediate = false) {
+            if (setSlotLock(state.editingRole, hex, { secondary_hex: hex, primary_share: 1.0, region_index: null })) {
+                queueRecommend(immediate);
+            }
+        }
+
+        function updateSVFromPointer(e) {
+            const rect = svCanvas.getBoundingClientRect();
+            const s = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const v = 1 - Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+            const [r, g, b] = hsvToRgb(state.hsv.h, s, v);
+            applyColorEdit(rgbToHex(r, g, b), false);
+        }
+
+        svCanvas.addEventListener("pointerdown", e => {
+            draggingSV = true;
+            svCanvas.setPointerCapture?.(e.pointerId);
+            updateSVFromPointer(e);
+        });
+        window.addEventListener("pointermove", e => { if (draggingSV) updateSVFromPointer(e); });
+        window.addEventListener("pointerup", () => { draggingSV = false; });
+
+        hueSlider.addEventListener("input", e => {
+            state.hsv.h = parseInt(e.target.value, 10);
+            const [r, g, b] = hsvToRgb(state.hsv.h, state.hsv.s, state.hsv.v);
+            applyColorEdit(rgbToHex(r, g, b), false);
+        });
+
+        hexField.addEventListener("change", e => {
+            let val = e.target.value.trim();
+            if (!val.startsWith("#")) val = "#" + val;
+            if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                applyColorEdit(val.toUpperCase(), true);
+            } else {
+                hexField.value = state.locks[state.editingRole]?.hex || "#1D3557";
+            }
+        });
+
+        hexField.addEventListener("blur", () => {
+            if (!/^#[0-9A-Fa-f]{6}$/.test(hexField.value.trim())) {
+                hexField.value = state.locks[state.editingRole]?.hex || "#1D3557";
+            }
+        });
+
+        document.getElementById("pinToggleBtn").addEventListener("click", () => {
+            if (state.locks[state.editingRole]) {
+                unlockSlot(state.editingRole);
+            } else {
+                const hx = (state.options.length && state.options[state.matchIdx].colors[state.editingRole])
+                    || hexField.value || "#1D3557";
+                if (setSlotLock(state.editingRole, hx, { region_index: null })) {
+                    queueRecommend(true);
+                }
+            }
+        });
+
+        document.querySelectorAll("[data-quick-hex]").forEach(btn => {
+            btn.addEventListener("click", () => applyColorEdit(btn.dataset.quickHex, true));
+        });
+
+        document.querySelectorAll("#clickTargetGroup [data-click-mode]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                state.photoClickMode = btn.dataset.clickMode;
+                document.querySelectorAll("#clickTargetGroup [data-click-mode]").forEach(b => {
+                    b.classList.toggle("active", b.dataset.clickMode === state.photoClickMode);
+                });
+            });
+        });
+
+        const fileInput = document.getElementById("fileInput");
+        const uploadDropzone = document.getElementById("uploadDropzone");
+
+        fileInput.addEventListener("change", e => handleUpload(e.target.files[0]));
+        uploadDropzone.addEventListener("dragover", e => { e.preventDefault(); uploadDropzone.classList.add("dragover"); });
+        uploadDropzone.addEventListener("dragleave", () => uploadDropzone.classList.remove("dragover"));
+        uploadDropzone.addEventListener("drop", e => {
+            e.preventDefault();
+            uploadDropzone.classList.remove("dragover");
+            if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files[0]);
+        });
+
+        document.getElementById("changePhotoBtn").addEventListener("click", () => {
+            fileInput.value = "";
+            fileInput.click();
+        });
+
+        document.getElementById("clearPhotoBtn").addEventListener("click", () => {
+            state.uploadId = null;
+            state.uploadedRegions = [];
+            ROLES.forEach(r => { if (state.locks[r]) state.locks[r].region_index = null; });
+            document.getElementById("photoActiveDot").classList.add("hidden");
+            document.getElementById("photoInspector").classList.add("hidden");
+            document.getElementById("uploadDropzone").classList.remove("hidden");
+            document.getElementById("auditCard").classList.add("hidden");
+            renderSlotRail();
+            queueRecommend(true);
+        });
+
+        document.getElementById("pinAllPhotoBtn").addEventListener("click", () => {
+            if (!state.uploadedRegions.length) return;
+            state.locks = {};
+            state.uploadedRegions.slice(0, 3).forEach(reg => {
+                setSlotLock(reg.role || "top", reg.hex, {
+                    secondary_hex: reg.secondary_hex,
+                    primary_share: reg.primary_share,
+                    region_index: reg.region_index
+                });
+            });
+            queueRecommend(true);
+        });
+
+        document.getElementById("photoWrap").addEventListener("click", async e => {
+            const imgEl = document.getElementById("uploadedPreview");
+            if (!state.uploadId || !imgEl.naturalWidth) return;
+            const rect = imgEl.getBoundingClientRect();
+            const xPct = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+            const yPct = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+
+            if (state.sampleAbort) state.sampleAbort.abort();
+            state.sampleAbort = new AbortController();
+
+            const targetRole = state.photoClickMode === "active" ? state.editingRole : null;
+
+            try {
+                const res = await fetch("/api/sample-pixel", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        upload_id: state.uploadId,
+                        x_pct: xPct,
+                        y_pct: yPct,
+                        target_role: targetRole
+                    }),
+                    signal: state.sampleAbort.signal
+                });
+                if (!res.ok) return;
+                const patch = await res.json();
+                renderPhotoPins(state.uploadedRegions, { x_pct: patch.x_pct, y_pct: patch.y_pct, hex: patch.hex });
+                const assignedRole = patch.role || state.editingRole;
+                if (setSlotLock(assignedRole, patch.hex, {
+                    secondary_hex: patch.hex,
+                    primary_share: 1.0,
+                    region_index: patch.region_index
+                })) {
+                    showToast(`Assigned ${patch.hex} (${patch.color_name}) to ${ROLE_NAMES[assignedRole]}`);
+                    queueRecommend(true);
+                }
+            } catch (err) {
+                if (err && err.name === "AbortError") return;
+            }
+        });
+
+        document.querySelectorAll("#styleControl [data-style]").forEach(btn => {
+            btn.addEventListener("click", () => setStyleFilter(btn.dataset.style, true));
+        });
+        document.querySelectorAll("#layerControl [data-layer]").forEach(btn => {
+            btn.addEventListener("click", () => setOuterwearMode(btn.dataset.layer, true));
+        });
+        document.getElementById("addJacketInlineBtn").addEventListener("click", () => setOuterwearMode("with", true));
+
+        document.querySelectorAll("[data-slab-role]").forEach(slab => {
+            slab.addEventListener("click", () => {
+                const role = slab.dataset.slabRole;
+                state.editingRole = role;
+                const hx = state.locks[role]?.hex || (state.options[state.matchIdx]?.colors[role]);
+                if (hx) syncPickerFromHex(hx);
+                renderSlotRail();
+            });
+        });
+
+        document.querySelectorAll("[data-pin-role]").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                const role = btn.dataset.pinRole;
+                if (state.locks[role]) {
+                    unlockSlot(role);
+                } else if (state.options.length) {
+                    const opt = state.options[state.matchIdx];
+                    const hx = opt.colors[role];
+                    if (hx && setSlotLock(role, hx, {
+                        secondary_hex: opt.secondary_colors?.[role] || hx,
+                        primary_share: opt.primary_shares?.[role] || 1.0,
+                        region_index: null
+                    })) {
+                        showToast(`Pinned ${ROLE_NAMES[role]} (${hx})`);
+                        queueRecommend(true);
+                    }
+                }
+            });
+        });
+
+        document.querySelectorAll("[data-copy-role]").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                const role = btn.dataset.copyRole;
+                const hx = state.options[state.matchIdx]?.colors[role];
+                if (!hx) return;
+                navigator.clipboard?.writeText(hx).catch(() => { });
+                showToast(`Copied primary ${hx}`);
+            });
+        });
+
+        document.querySelectorAll("[data-copy-sec-role]").forEach(btn => {
+            btn.addEventListener("click", e => {
+                e.stopPropagation();
+                const role = btn.dataset.copySecRole;
+                const opt = state.options[state.matchIdx];
+                const hx = opt?.secondary_colors?.[role];
+                if (!hx) return;
+                const nm = opt?.secondary_color_names?.[role] || nameFromHex(hx);
+                navigator.clipboard?.writeText(hx).catch(() => { });
+                showToast(`Copied accent ${hx} (${nm})`);
+            });
+        });
+
+        document.getElementById("prevLookBtn").addEventListener("click", () => renderLook(state.matchIdx - 1));
+        document.getElementById("nextLookBtn").addEventListener("click", () => renderLook(state.matchIdx + 1));
+
+        document.getElementById("shuffleBtn").addEventListener("click", () => {
+            state.shuffleSeed = (state.shuffleSeed + 1) % 10000;
+            if (state.shuffleSeed === 0) state.shuffleSeed = 1;
+            queueRecommend(true);
+        });
+
+        document.getElementById("saveLookBtn").addEventListener("click", async () => {
+            if (!state.options.length) return;
+            const opt = state.options[state.matchIdx];
+            try {
+                const res = await fetch("/api/saved-looks", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(opt)
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.created) {
+                    state.savedLooks.unshift(data.saved);
+                    document.getElementById("savedCountBadge").textContent = String(state.savedLooks.length);
+                    updateSaveBtnState();
+                    showToast("Saved permanently to HueFit");
+                } else {
+                    showToast("Already in Saved Looks");
+                }
+            } catch (_) {
+                showError("Could not save look — verify local server is running.");
+            }
+        });
+
+        document.getElementById("exportPngBtn").addEventListener("click", exportLookcardPng);
+        document.getElementById("openSavedBtn").addEventListener("click", () => toggleDrawer(true));
+        document.getElementById("closeSavedBtn").addEventListener("click", () => toggleDrawer(false));
+        document.getElementById("drawerBackdrop").addEventListener("click", () => toggleDrawer(false));
+
+        document.getElementById("scienceToggleBtn").addEventListener("click", () => {
+            const body = document.getElementById("scienceBody");
+            const open = body.classList.toggle("hidden") === false;
+            document.getElementById("scienceToggleBtn").setAttribute("aria-expanded", String(open));
+            document.getElementById("scienceToggleIcon").textContent = open ? "Hide −" : "Show +";
+            if (open && state.options.length) drawOklabWheel(state.options[state.matchIdx]);
+        });
+
+        document.getElementById("resetAllBtn").addEventListener("click", () => {
+            state.uploadId = null;
+            state.uploadedRegions = [];
+            state.editingRole = "top";
+            state.shuffleSeed = 0;
+            state.locks = {
+                top: { hex: "#1D3557", secondary_hex: "#1D3557", primary_share: 1.0, region_index: null }
+            };
+            document.getElementById("photoActiveDot").classList.add("hidden");
+            document.getElementById("photoInspector").classList.add("hidden");
+            document.getElementById("uploadDropzone").classList.remove("hidden");
+            document.getElementById("auditCard").classList.add("hidden");
+            setStyleFilter("All", false);
+            setOuterwearMode("any", false);
+            setInputTab("color");
+            syncPickerFromHex("#1D3557");
+            renderSlotRail();
+            queueRecommend(true);
+        });
+
+        window.addEventListener("keydown", e => {
+            const tag = (e.target && e.target.tagName) || "";
+            if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+            if (e.code === "Space") {
+                e.preventDefault();
+                document.getElementById("shuffleBtn").click();
+            } else if (e.key === "ArrowRight") {
+                e.preventDefault();
+                renderLook(state.matchIdx + 1);
+            } else if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                renderLook(state.matchIdx - 1);
+            } else if (["1", "2", "3", "4"].includes(e.key)) {
+                const role = ROLES[parseInt(e.key, 10) - 1];
+                document.querySelector(`[data-slot="${role}"]`)?.click();
+            } else if (e.key === "d" || e.key === "D") {
+                applyTheme(state.theme === "light" ? "dark" : "light");
+            } else if (e.key === "Escape") {
+                toggleDrawer(false);
+            }
+        });
+
+        async function init() {
+            applyTheme(state.theme);
+            syncPickerFromHex("#1D3557");
+            renderSlotRail();
+            await loadSavedLooksFromDisk();
+            queueRecommend(true);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

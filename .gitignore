@@ -1,0 +1,34 @@
+# Virtual environments & caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Raw Polyvore dataset (gated, ~4 GB)
+data/
+
+# Release output directory
+dist/
+
+# Runtime & training binary artifacts (shipped via GitHub Releases, not Git)
+artifacts/*
+!artifacts/.gitkeep
+
+# Personal user data & temporary files
+artifacts/saved_looks.json
+*.tmp
+*.log
+
+# OS & editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Secrets & stray local shortcuts
+.env
+*.lnk
